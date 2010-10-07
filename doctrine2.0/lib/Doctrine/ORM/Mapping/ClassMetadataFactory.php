@@ -19,10 +19,8 @@
 
 namespace Doctrine\ORM\Mapping;
 
-use ReflectionException,
-    Doctrine\ORM\ORMException,
-    Doctrine\ORM\EntityManager,
-    Doctrine\DBAL\Platforms,
+use Doctrine\ORM\ORMException,
+    Doctrine\DBAL\Platforms\AbstractPlatform,
     Doctrine\ORM\Events;
 
 /**
@@ -38,49 +36,26 @@ use ReflectionException,
  */
 class ClassMetadataFactory
 {
-    /**
-     * @var EntityManager
-     */
-    private $em;
-    
-    /**
-     * @var AbstractPlatform
-     */
-    private $targetPlatform;
-
-    /**
-     * @var Driver\Driver
-     */
-    private $driver;
-
-    /**
-     * @var \Doctrine\Common\EventManager
-     */
-    private $evm;
-
-    /**
-     * @var \Doctrine\Common\Cache\Cache
-     */
-    private $cacheDriver;
-
-    /**
-     * @var array
-     */
-    private $loadedMetadata = array();
-
-    /**
-     * @var bool
-     */
-    private $initialized = false;
+    private $_em;
+    /** The targeted database platform. */
+    private $_targetPlatform;
+    /** The used metadata driver. */
+    private $_driver;
+    /** The event manager instance */
+    private $_evm;
+    /** The used cache driver. */
+    private $_cacheDriver;
+    private $_loadedMetadata = array();
+    private $_initialized = false;
     
     /**
      * Creates a new factory instance that uses the given metadata driver implementation.
      *
      * @param $driver  The metadata driver to use.
      */
-    public function __construct(EntityManager $em)
+    public function __construct(\Doctrine\ORM\EntityManager $em)
     {
-        $this->em = $em;
+        $this->_em = $em;
     }
 
     /**
@@ -90,7 +65,7 @@ class ClassMetadataFactory
      */
     public function setCacheDriver($cacheDriver)
     {
-        $this->cacheDriver = $cacheDriver;
+        $this->_cacheDriver = $cacheDriver;
     }
 
     /**
@@ -100,12 +75,12 @@ class ClassMetadataFactory
      */
     public function getCacheDriver()
     {
-        return $this->cacheDriver;
+        return $this->_cacheDriver;
     }
     
     public function getLoadedMetadata()
     {
-        return $this->loadedMetadata;
+        return $this->_loadedMetadata;
     }
     
     /**
@@ -116,28 +91,28 @@ class ClassMetadataFactory
      */
     public function getAllMetadata()
     {
-        if ( ! $this->initialized) {
-            $this->initialize();
+        if ( ! $this->_initialized) {
+            $this->_initialize();
         }
-
+        
         $metadata = array();
-        foreach ($this->driver->getAllClassNames() as $className) {
+        foreach ($this->_driver->getAllClassNames() as $className) {
             $metadata[] = $this->getMetadataFor($className);
         }
-
+        
         return $metadata;
     }
-
+    
     /**
      * Lazy initialization of this stuff, especially the metadata driver,
      * since these are not needed at all when a metadata cache is active.
      */
-    private function initialize()
+    private function _initialize()
     {
-        $this->driver = $this->em->getConfiguration()->getMetadataDriverImpl();
-        $this->targetPlatform = $this->em->getConnection()->getDatabasePlatform();
-        $this->evm = $this->em->getEventManager();
-        $this->initialized = true;
+        $this->_driver = $this->_em->getConfiguration()->getMetadataDriverImpl();
+        $this->_targetPlatform = $this->_em->getConnection()->getDatabasePlatform();
+        $this->_evm = $this->_em->getEventManager();
+        $this->_initialized = true;
     }
 
     /**
@@ -148,43 +123,43 @@ class ClassMetadataFactory
      */
     public function getMetadataFor($className)
     {
-        if ( ! isset($this->loadedMetadata[$className])) {
+        if ( ! isset($this->_loadedMetadata[$className])) {
             $realClassName = $className;
 
             // Check for namespace alias
             if (strpos($className, ':') !== false) {
                 list($namespaceAlias, $simpleClassName) = explode(':', $className);
-                $realClassName = $this->em->getConfiguration()->getEntityNamespace($namespaceAlias) . '\\' . $simpleClassName;
+                $realClassName = $this->_em->getConfiguration()->getEntityNamespace($namespaceAlias) . '\\' . $simpleClassName;
 
-                if (isset($this->loadedMetadata[$realClassName])) {
+                if (isset($this->_loadedMetadata[$realClassName])) {
                     // We do not have the alias name in the map, include it
-                    $this->loadedMetadata[$className] = $this->loadedMetadata[$realClassName];
+                    $this->_loadedMetadata[$className] = $this->_loadedMetadata[$realClassName];
 
-                    return $this->loadedMetadata[$realClassName];
+                    return $this->_loadedMetadata[$realClassName];
                 }
             }
 
-            if ($this->cacheDriver) {
-                if (($cached = $this->cacheDriver->fetch("$realClassName\$CLASSMETADATA")) !== false) {
-                    $this->loadedMetadata[$realClassName] = $cached;
+            if ($this->_cacheDriver) {
+                if (($cached = $this->_cacheDriver->fetch("$realClassName\$CLASSMETADATA")) !== false) {
+                    $this->_loadedMetadata[$realClassName] = $cached;
                 } else {
-                    foreach ($this->loadMetadata($realClassName) as $loadedClassName) {
-                        $this->cacheDriver->save(
-                            "$loadedClassName\$CLASSMETADATA", $this->loadedMetadata[$loadedClassName], null
+                    foreach ($this->_loadMetadata($realClassName) as $loadedClassName) {
+                        $this->_cacheDriver->save(
+                            "$loadedClassName\$CLASSMETADATA", $this->_loadedMetadata[$loadedClassName], null
                         );
                     }
                 }
             } else {
-                $this->loadMetadata($realClassName);
+                $this->_loadMetadata($realClassName);
             }
 
             if ($className != $realClassName) {
                 // We do not have the alias name in the map, include it
-                $this->loadedMetadata[$className] = $this->loadedMetadata[$realClassName];
+                $this->_loadedMetadata[$className] = $this->_loadedMetadata[$realClassName];
             }
         }
 
-        return $this->loadedMetadata[$className];
+        return $this->_loadedMetadata[$className];
     }
 
     /**
@@ -195,7 +170,7 @@ class ClassMetadataFactory
      */
     public function hasMetadataFor($className)
     {
-        return isset($this->loadedMetadata[$className]);
+        return isset($this->_loadedMetadata[$className]);
     }
 
     /**
@@ -208,7 +183,7 @@ class ClassMetadataFactory
      */
     public function setMetadataFor($className, $class)
     {
-        $this->loadedMetadata[$className] = $class;
+        $this->_loadedMetadata[$className] = $class;
     }
 
     /**
@@ -217,12 +192,12 @@ class ClassMetadataFactory
      * @param string $name
      * @return array $parentClasses
      */
-    protected function getParentClasses($name)
+    protected function _getParentClasses($name)
     {
         // Collect parent classes, ignoring transient (not-mapped) classes.
         $parentClasses = array();
         foreach (array_reverse(class_parents($name)) as $parentClass) {
-            if ( ! $this->driver->isTransient($parentClass)) {
+            if ( ! $this->_driver->isTransient($parentClass)) {
                 $parentClasses[] = $parentClass;
             }
         }
@@ -236,49 +211,48 @@ class ClassMetadataFactory
      * @param string $name The name of the class for which the metadata should get loaded.
      * @param array  $tables The metadata collection to which the loaded metadata is added.
      */
-    protected function loadMetadata($name)
+    protected function _loadMetadata($name)
     {
-        if ( ! $this->initialized) {
-            $this->initialize();
+        if ( ! $this->_initialized) {
+            $this->_initialize();
         }
 
         $loaded = array();
 
-        $parentClasses = $this->getParentClasses($name);
+        $parentClasses = $this->_getParentClasses($name);
         $parentClasses[] = $name;
 
         // Move down the hierarchy of parent classes, starting from the topmost class
         $parent = null;
         $visited = array();
         foreach ($parentClasses as $className) {
-            if (isset($this->loadedMetadata[$className])) {
-                $parent = $this->loadedMetadata[$className];
+            if (isset($this->_loadedMetadata[$className])) {
+                $parent = $this->_loadedMetadata[$className];
                 if ( ! $parent->isMappedSuperclass) {
                     array_unshift($visited, $className);
                 }
                 continue;
             }
 
-            $class = $this->newClassMetadataInstance($className);
+            $class = $this->_newClassMetadataInstance($className);
 
             if ($parent) {
                 $class->setInheritanceType($parent->inheritanceType);
                 $class->setDiscriminatorColumn($parent->discriminatorColumn);
                 $class->setIdGeneratorType($parent->generatorType);
-                $this->addInheritedFields($class, $parent);
-                $this->addInheritedRelations($class, $parent);
+                $this->_addInheritedFields($class, $parent);
+                $this->_addInheritedRelations($class, $parent);
                 $class->setIdentifier($parent->identifier);
                 $class->setVersioned($parent->isVersioned);
                 $class->setVersionField($parent->versionField);
                 $class->setDiscriminatorMap($parent->discriminatorMap);
                 $class->setLifecycleCallbacks($parent->lifecycleCallbacks);
-                $class->setChangeTrackingPolicy($parent->changeTrackingPolicy);
             }
 
             // Invoke driver
             try {
-                $this->driver->loadMetadataForClass($className, $class);
-            } catch (ReflectionException $e) {
+                $this->_driver->loadMetadataForClass($className, $class);
+            } catch(\ReflectionException $e) { 
                 throw MappingException::reflectionFailure($className, $e);
             }
 
@@ -299,31 +273,21 @@ class ClassMetadataFactory
                     $class->setIdGenerator($parent->idGenerator);
                 }
             } else {
-                $this->completeIdGeneratorMapping($class);
+                $this->_completeIdGeneratorMapping($class);
             }
-
+            
             if ($parent && $parent->isInheritanceTypeSingleTable()) {
-                $class->setPrimaryTable($parent->table);
+                $class->setTableName($parent->getTableName());
             }
 
             $class->setParentClasses($visited);
 
-            if ($this->evm->hasListeners(Events::loadClassMetadata)) {
+            if ($this->_evm->hasListeners(Events::loadClassMetadata)) {
                 $eventArgs = new \Doctrine\ORM\Event\LoadClassMetadataEventArgs($class);
-                $this->evm->dispatchEvent(Events::loadClassMetadata, $eventArgs);
+                $this->_evm->dispatchEvent(Events::loadClassMetadata, $eventArgs);
             }
 
-            // verify inheritance
-            if (!$parent && !$class->isMappedSuperclass && !$class->isInheritanceTypeNone()) {
-                if (count($class->discriminatorMap) == 0) {
-                    throw MappingException::missingDiscriminatorMap($class->name);
-                }
-                if (!$class->discriminatorColumn) {
-                    throw MappingException::missingDiscriminatorColumn($class->name);
-                }
-            }
-
-            $this->loadedMetadata[$className] = $class;
+            $this->_loadedMetadata[$className] = $class;
 
             $parent = $class;
 
@@ -343,18 +307,18 @@ class ClassMetadataFactory
      * @param string $className
      * @return Doctrine\ORM\Mapping\ClassMetadata
      */
-    protected function newClassMetadataInstance($className)
+    protected function _newClassMetadataInstance($className)
     {
         return new ClassMetadata($className);
     }
-
+    
     /**
      * Adds inherited fields to the subclass mapping.
      *
      * @param Doctrine\ORM\Mapping\ClassMetadata $subClass
      * @param Doctrine\ORM\Mapping\ClassMetadata $parentClass
      */
-    private function addInheritedFields(ClassMetadata $subClass, ClassMetadata $parentClass)
+    private function _addInheritedFields(ClassMetadata $subClass, ClassMetadata $parentClass)
     {
         foreach ($parentClass->fieldMappings as $fieldName => $mapping) {
             if ( ! isset($mapping['inherited']) && ! $parentClass->isMappedSuperclass) {
@@ -376,21 +340,17 @@ class ClassMetadataFactory
      * @param Doctrine\ORM\Mapping\ClassMetadata $subClass
      * @param Doctrine\ORM\Mapping\ClassMetadata $parentClass
      */
-    private function addInheritedRelations(ClassMetadata $subClass, ClassMetadata $parentClass)
+    private function _addInheritedRelations(ClassMetadata $subClass, ClassMetadata $parentClass)
     {
         foreach ($parentClass->associationMappings as $field => $mapping) {
-            if ($parentClass->isMappedSuperclass) {
-                $mapping['sourceEntity'] = $subClass->name;
+            $subclassMapping = clone $mapping;
+            if ( ! isset($mapping->inherited) && ! $parentClass->isMappedSuperclass) {
+                $subclassMapping->inherited = $parentClass->name;
             }
-
-            //$subclassMapping = $mapping;
-            if ( ! isset($mapping['inherited']) && ! $parentClass->isMappedSuperclass) {
-                $mapping['inherited'] = $parentClass->name;
+            if ( ! isset($mapping->declared)) {
+                $subclassMapping->declared = $parentClass->name;
             }
-            if ( ! isset($mapping['declared'])) {
-                $mapping['declared'] = $parentClass->name;
-            }
-            $subClass->addInheritedAssociationMapping($mapping);
+            $subClass->addInheritedAssociationMapping($subclassMapping);
         }
     }
 
@@ -400,13 +360,13 @@ class ClassMetadataFactory
      *
      * @param Doctrine\ORM\Mapping\ClassMetadata $class
      */
-    private function completeIdGeneratorMapping(ClassMetadataInfo $class)
+    private function _completeIdGeneratorMapping(ClassMetadataInfo $class)
     {
         $idGenType = $class->generatorType;
         if ($idGenType == ClassMetadata::GENERATOR_TYPE_AUTO) {
-            if ($this->targetPlatform->prefersSequences()) {
+            if ($this->_targetPlatform->prefersSequences()) {
                 $class->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_SEQUENCE);
-            } else if ($this->targetPlatform->prefersIdentityColumns()) {
+            } else if ($this->_targetPlatform->prefersIdentityColumns()) {
                 $class->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_IDENTITY);
             } else {
                 $class->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_TABLE);
@@ -416,21 +376,15 @@ class ClassMetadataFactory
         // Create & assign an appropriate ID generator instance
         switch ($class->generatorType) {
             case ClassMetadata::GENERATOR_TYPE_IDENTITY:
-                // For PostgreSQL IDENTITY (SERIAL) we need a sequence name. It defaults to
-                // <table>_<column>_seq in PostgreSQL for SERIAL columns.
-                // Not pretty but necessary and the simplest solution that currently works.
-                $seqName = $this->targetPlatform instanceof Platforms\PostgreSQLPlatform ?
-                        $class->table['name'] . '_' . $class->columnNames[$class->identifier[0]] . '_seq' :
-                        null;
-                $class->setIdGenerator(new \Doctrine\ORM\Id\IdentityGenerator($seqName));
+                $class->setIdGenerator(new \Doctrine\ORM\Id\IdentityGenerator());
                 break;
             case ClassMetadata::GENERATOR_TYPE_SEQUENCE:
                 // If there is no sequence definition yet, create a default definition
                 $definition = $class->sequenceGeneratorDefinition;
                 if ( ! $definition) {
                     $sequenceName = $class->getTableName() . '_' . $class->getSingleIdentifierColumnName() . '_seq';
-                    $definition['sequenceName'] = $this->targetPlatform->fixSchemaElementName($sequenceName);
-                    $definition['allocationSize'] = 1;
+                    $definition['sequenceName'] = $this->_targetPlatform->fixSchemaElementName($sequenceName);
+                    $definition['allocationSize'] = 10;
                     $definition['initialValue'] = 1;
                     $class->setSequenceGeneratorDefinition($definition);
                 }

@@ -58,7 +58,7 @@ class MultiTableDeleteExecutor extends AbstractSqlExecutor
         $primaryDqlAlias = $AST->deleteClause->aliasIdentificationVariable;
         $rootClass = $em->getClassMetadata($primaryClass->rootEntityName);
 
-        $tempTable = $platform->getTemporaryTableName($rootClass->getTemporaryIdTableName());
+        $tempTable = $rootClass->getTemporaryIdTableName();
         $idColumnNames = $rootClass->getIdentifierColumnNames();
         $idColumnList = implode(', ', $idColumnNames);
 
@@ -95,7 +95,8 @@ class MultiTableDeleteExecutor extends AbstractSqlExecutor
             );
         }
         $this->_createTempTableSql = $platform->getCreateTemporaryTableSnippetSQL() . ' ' . $tempTable . ' ('
-                . $platform->getColumnDeclarationListSQL($columnDefinitions) . ')';
+                . $platform->getColumnDeclarationListSQL($columnDefinitions)
+                . ', PRIMARY KEY(' . $idColumnList . '))';
         $this->_dropTempTableSql = 'DROP TABLE ' . $tempTable;
     }
 

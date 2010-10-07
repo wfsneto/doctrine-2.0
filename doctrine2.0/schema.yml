@@ -1,0 +1,13 @@
+Entities\Cidade:
+  type: entity
+  table: cidade
+  fields:
+    id:
+      type: integer
+      id: true
+      generator:
+        strategy: AUTO
+    nome:
+      type: string
+    uf:
+      type: string

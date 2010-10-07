@@ -1,5 +1,7 @@
 <?php
 /*
+ *  $Id$
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -19,19 +21,19 @@
 
 namespace Doctrine\ORM;
 
-use Closure, Exception,
-    Doctrine\Common\EventManager,
+use Doctrine\Common\EventManager,
     Doctrine\DBAL\Connection,
-    Doctrine\DBAL\LockMode,
     Doctrine\ORM\Mapping\ClassMetadata,
     Doctrine\ORM\Mapping\ClassMetadataFactory,
-    Doctrine\ORM\Query\ResultSetMapping,
     Doctrine\ORM\Proxy\ProxyFactory;
 
 /**
  * The EntityManager is the central access point to ORM functionality.
  *
+ * @license http://www.opensource.org/licenses/lgpl-license.php LGPL
+ * @link    www.doctrine-project.org
  * @since   2.0
+ * @version $Revision$
  * @author  Benjamin Eberlei <kontakt@beberlei.de>
  * @author  Guilherme Blanco <guilhermeblanco@hotmail.com>
  * @author  Jonathan Wage <jonwage@gmail.com>
@@ -44,66 +46,66 @@ class EntityManager
      *
      * @var Doctrine\ORM\Configuration
      */
-    private $config;
+    private $_config;
 
     /**
      * The database connection used by the EntityManager.
      *
      * @var Doctrine\DBAL\Connection
      */
-    private $conn;
+    private $_conn;
 
     /**
      * The metadata factory, used to retrieve the ORM metadata of entity classes.
      *
      * @var Doctrine\ORM\Mapping\ClassMetadataFactory
      */
-    private $metadataFactory;
+    private $_metadataFactory;
 
     /**
      * The EntityRepository instances.
      *
      * @var array
      */
-    private $repositories = array();
+    private $_repositories = array();
 
     /**
      * The UnitOfWork used to coordinate object-level transactions.
      *
      * @var Doctrine\ORM\UnitOfWork
      */
-    private $unitOfWork;
+    private $_unitOfWork;
 
     /**
      * The event manager that is the central point of the event system.
      *
      * @var Doctrine\Common\EventManager
      */
-    private $eventManager;
+    private $_eventManager;
 
     /**
      * The maintained (cached) hydrators. One instance per type.
      *
      * @var array
      */
-    private $hydrators = array();
+    private $_hydrators = array();
 
     /**
      * The proxy factory used to create dynamic proxies.
      *
      * @var Doctrine\ORM\Proxy\ProxyFactory
      */
-    private $proxyFactory;
+    private $_proxyFactory;
 
     /**
      * @var ExpressionBuilder The expression builder instance used to generate query expressions.
      */
-    private $expressionBuilder;
+    private $_expressionBuilder;
 
     /**
      * Whether the EntityManager is closed or not.
      */
-    private $closed = false;
+    private $_closed = false;
 
     /**
      * Creates a new EntityManager that operates on the given database connection
@@ -115,13 +117,13 @@ class EntityManager
      */
     protected function __construct(Connection $conn, Configuration $config, EventManager $eventManager)
     {
-        $this->conn = $conn;
-        $this->config = $config;
-        $this->eventManager = $eventManager;
-        $this->metadataFactory = new ClassMetadataFactory($this);
-        $this->metadataFactory->setCacheDriver($this->config->getMetadataCacheImpl());
-        $this->unitOfWork = new UnitOfWork($this);
-        $this->proxyFactory = new ProxyFactory($this,
+        $this->_conn = $conn;
+        $this->_config = $config;
+        $this->_eventManager = $eventManager;
+        $this->_metadataFactory = new ClassMetadataFactory($this);
+        $this->_metadataFactory->setCacheDriver($this->_config->getMetadataCacheImpl());
+        $this->_unitOfWork = new UnitOfWork($this);
+        $this->_proxyFactory = new ProxyFactory($this,
                 $config->getProxyDir(),
                 $config->getProxyNamespace(),
                 $config->getAutoGenerateProxyClasses());
@@ -134,7 +136,7 @@ class EntityManager
      */
     public function getConnection()
     {
-        return $this->conn;
+        return $this->_conn;
     }
 
     /**
@@ -144,7 +146,7 @@ class EntityManager
      */
     public function getMetadataFactory()
     {
-        return $this->metadataFactory;
+        return $this->_metadataFactory;
     }
 
     /**
@@ -152,95 +154,57 @@ class EntityManager
      *
      * Example:
      *
-     * <code>
+     *     [php]
      *     $qb = $em->createQueryBuilder();
      *     $expr = $em->getExpressionBuilder();
      *     $qb->select('u')->from('User', 'u')
      *         ->where($expr->orX($expr->eq('u.id', 1), $expr->eq('u.id', 2)));
-     * </code>
      *
      * @return ExpressionBuilder
      */
     public function getExpressionBuilder()
     {
-        if ($this->expressionBuilder === null) {
-            $this->expressionBuilder = new Query\Expr;
+        if ($this->_expressionBuilder === null) {
+            $this->_expressionBuilder = new Query\Expr;
         }
-        return $this->expressionBuilder;
+        return $this->_expressionBuilder;
     }
 
     /**
      * Starts a transaction on the underlying database connection.
-     *
-     * @deprecated Use {@link getConnection}.beginTransaction().
      */
     public function beginTransaction()
     {
-        $this->conn->beginTransaction();
-    }
-
-    /**
-     * Executes a function in a transaction.
-     *
-     * The function gets passed this EntityManager instance as an (optional) parameter.
-     *
-     * {@link flush} is invoked prior to transaction commit.
-     *
-     * If an exception occurs during execution of the function or flushing or transaction commit,
-     * the transaction is rolled back, the EntityManager closed and the exception re-thrown.
-     *
-     * @param Closure $func The function to execute transactionally.
-     */
-    public function transactional(Closure $func)
-    {
-        $this->conn->beginTransaction();
-        try {
-            $func($this);
-            $this->flush();
-            $this->conn->commit();
-        } catch (Exception $e) {
-            $this->close();
-            $this->conn->rollback();
-            throw $e;
-        }
+        $this->_conn->beginTransaction();
     }
 
     /**
      * Commits a transaction on the underlying database connection.
-     *
-     * @deprecated Use {@link getConnection}.commit().
      */
     public function commit()
     {
-        $this->conn->commit();
+        $this->_conn->commit();
     }
 
     /**
-     * Performs a rollback on the underlying database connection.
-     *
-     * @deprecated Use {@link getConnection}.rollback().
+     * Performs a rollback on the underlying database connection and closes the
+     * EntityManager as it may now be in a corrupted state.
      */
     public function rollback()
     {
-        $this->conn->rollback();
+        $this->_conn->rollback();
+        $this->close();
     }
 
     /**
-     * Returns the ORM metadata descriptor for a class.
-     *
-     * The class name must be the fully-qualified class name without a leading backslash
-     * (as it is returned by get_class($obj)) or an aliased class name.
-     * 
-     * Examples:
-     * MyProject\Domain\User
-     * sales:PriceRequest
+     * Returns the metadata for a class.
      *
      * @return Doctrine\ORM\Mapping\ClassMetadata
      * @internal Performance-sensitive method.
      */
     public function getClassMetadata($className)
     {
-        return $this->metadataFactory->getMetadataFor($className);
+        return $this->_metadataFactory->getMetadataFor($className);
     }
 
     /**
@@ -266,7 +230,7 @@ class EntityManager
      */
     public function createNamedQuery($name)
     {
-        return $this->createQuery($this->config->getNamedQuery($name));
+        return $this->createQuery($this->_config->getNamedQuery($name));
     }
 
     /**
@@ -276,7 +240,7 @@ class EntityManager
      * @param ResultSetMapping $rsm The ResultSetMapping to use.
      * @return NativeQuery
      */
-    public function createNativeQuery($sql, ResultSetMapping $rsm)
+    public function createNativeQuery($sql, \Doctrine\ORM\Query\ResultSetMapping $rsm)
     {
         $query = new NativeQuery($this);
         $query->setSql($sql);
@@ -292,7 +256,7 @@ class EntityManager
      */
     public function createNamedNativeQuery($name)
     {
-        list($sql, $rsm) = $this->config->getNamedNativeQuery($name);
+        list($sql, $rsm) = $this->_config->getNamedNativeQuery($name);
         return $this->createNativeQuery($sql, $rsm);
     }
 
@@ -310,14 +274,11 @@ class EntityManager
      * Flushes all changes to objects that have been queued up to now to the database.
      * This effectively synchronizes the in-memory state of managed objects with the
      * database.
-     *
-     * @throws Doctrine\ORM\OptimisticLockException If a version check on an entity that
-     *         makes use of optimistic locking fails.
      */
     public function flush()
     {
-        $this->errorIfClosed();
-        $this->unitOfWork->commit();
+        $this->_errorIfClosed();
+        $this->_unitOfWork->commit();
     }
 
     /**
@@ -327,74 +288,36 @@ class EntityManager
      *
      * @param string $entityName
      * @param mixed $identifier
-     * @param int $lockMode
-     * @param int $lockVersion
      * @return object
      */
-    public function find($entityName, $identifier, $lockMode = LockMode::NONE, $lockVersion = null)
+    public function find($entityName, $identifier)
     {
-        return $this->getRepository($entityName)->find($identifier, $lockMode, $lockVersion);
+        return $this->getRepository($entityName)->find($identifier);
     }
 
     /**
      * Gets a reference to the entity identified by the given type and identifier
-     * without actually loading it, if the entity is not yet loaded.
+     * without actually loading it.
      *
-     * @param string $entityName The name of the entity type.
-     * @param mixed $identifier The entity identifier.
+     * If partial objects are allowed, this method will return a partial object that only
+     * has its identifier populated. Otherwise a proxy is returned that automatically
+     * loads itself on first access.
+     *
      * @return object The entity reference.
      */
     public function getReference($entityName, $identifier)
     {
-        $class = $this->metadataFactory->getMetadataFor(ltrim($entityName, '\\'));
+        $class = $this->_metadataFactory->getMetadataFor($entityName);
 
         // Check identity map first, if its already in there just return it.
-        if ($entity = $this->unitOfWork->tryGetById($identifier, $class->rootEntityName)) {
+        if ($entity = $this->_unitOfWork->tryGetById($identifier, $class->rootEntityName)) {
             return $entity;
         }
         if ( ! is_array($identifier)) {
             $identifier = array($class->identifier[0] => $identifier);
         }
-        $entity = $this->proxyFactory->getProxy($class->name, $identifier);
-        $this->unitOfWork->registerManaged($entity, $identifier, array());
-
-        return $entity;
-    }
-
-    /**
-     * Gets a partial reference to the entity identified by the given type and identifier
-     * without actually loading it, if the entity is not yet loaded.
-     *
-     * The returned reference may be a partial object if the entity is not yet loaded/managed.
-     * If it is a partial object it will not initialize the rest of the entity state on access.
-     * Thus you can only ever safely access the identifier of an entity obtained through
-     * this method.
-     *
-     * The use-cases for partial references involve maintaining bidirectional associations
-     * without loading one side of the association or to update an entity without loading it.
-     * Note, however, that in the latter case the original (persistent) entity data will
-     * never be visible to the application (especially not event listeners) as it will
-     * never be loaded in the first place.
-     *
-     * @param string $entityName The name of the entity type.
-     * @param mixed $identifier The entity identifier.
-     * @return object The (partial) entity reference.
-     */
-    public function getPartialReference($entityName, $identifier)
-    {
-        $class = $this->metadataFactory->getMetadataFor(ltrim($entityName, '\\'));
-
-        // Check identity map first, if its already in there just return it.
-        if ($entity = $this->unitOfWork->tryGetById($identifier, $class->rootEntityName)) {
-            return $entity;
-        }
-        if ( ! is_array($identifier)) {
-            $identifier = array($class->identifier[0] => $identifier);
-        }
-
-        $entity = $class->newInstance();
-        $class->setIdentifierValues($entity, $identifier);
-        $this->unitOfWork->registerManaged($entity, $identifier, array());
+        $entity = $this->_proxyFactory->getProxy($class->name, $identifier);
+        $this->_unitOfWork->registerManaged($entity, $identifier, array());
 
         return $entity;
     }
@@ -408,7 +331,7 @@ class EntityManager
     public function clear($entityName = null)
     {
         if ($entityName === null) {
-            $this->unitOfWork->clear();
+            $this->_unitOfWork->clear();
         } else {
             //TODO
             throw new ORMException("EntityManager#clear(\$entityName) not yet implemented.");
@@ -423,7 +346,7 @@ class EntityManager
     public function close()
     {
         $this->clear();
-        $this->closed = true;
+        $this->_closed = true;
     }
 
     /**
@@ -442,8 +365,8 @@ class EntityManager
         if ( ! is_object($entity)) {
             throw new \InvalidArgumentException(gettype($entity));
         }
-        $this->errorIfClosed();
-        $this->unitOfWork->persist($entity);
+        $this->_errorIfClosed();
+        $this->_unitOfWork->persist($entity);
     }
 
     /**
@@ -459,8 +382,8 @@ class EntityManager
         if ( ! is_object($entity)) {
             throw new \InvalidArgumentException(gettype($entity));
         }
-        $this->errorIfClosed();
-        $this->unitOfWork->remove($entity);
+        $this->_errorIfClosed();
+        $this->_unitOfWork->remove($entity);
     }
 
     /**
@@ -474,8 +397,8 @@ class EntityManager
         if ( ! is_object($entity)) {
             throw new \InvalidArgumentException(gettype($entity));
         }
-        $this->errorIfClosed();
-        $this->unitOfWork->refresh($entity);
+        $this->_errorIfClosed();
+        $this->_unitOfWork->refresh($entity);
     }
 
     /**
@@ -492,7 +415,7 @@ class EntityManager
         if ( ! is_object($entity)) {
             throw new \InvalidArgumentException(gettype($entity));
         }
-        $this->unitOfWork->detach($entity);
+        $this->_unitOfWork->detach($entity);
     }
 
     /**
@@ -508,8 +431,8 @@ class EntityManager
         if ( ! is_object($entity)) {
             throw new \InvalidArgumentException(gettype($entity));
         }
-        $this->errorIfClosed();
-        return $this->unitOfWork->merge($entity);
+        $this->_errorIfClosed();
+        return $this->_unitOfWork->merge($entity);
     }
 
     /**
@@ -526,30 +449,15 @@ class EntityManager
     }
 
     /**
-     * Acquire a lock on the given entity.
-     *
-     * @param object $entity
-     * @param int $lockMode
-     * @param int $lockVersion
-     * @throws OptimisticLockException
-     * @throws PessimisticLockException
-     */
-    public function lock($entity, $lockMode, $lockVersion = null)
-    {
-        $this->unitOfWork->lock($entity, $lockMode, $lockVersion);
-    }
-
-    /**
      * Gets the repository for an entity class.
      *
-     * @param string $entityName The name of the entity.
-     * @return EntityRepository The repository class.
+     * @param string $entityName  The name of the Entity.
+     * @return EntityRepository  The repository.
      */
     public function getRepository($entityName)
     {
-        $entityName = ltrim($entityName, '\\');
-        if (isset($this->repositories[$entityName])) {
-            return $this->repositories[$entityName];
+        if (isset($this->_repositories[$entityName])) {
+            return $this->_repositories[$entityName];
         }
 
         $metadata = $this->getClassMetadata($entityName);
@@ -561,7 +469,7 @@ class EntityManager
             $repository = new EntityRepository($this, $metadata);
         }
 
-        $this->repositories[$entityName] = $repository;
+        $this->_repositories[$entityName] = $repository;
 
         return $repository;
     }
@@ -574,9 +482,9 @@ class EntityManager
      */
     public function contains($entity)
     {
-        return $this->unitOfWork->isScheduledForInsert($entity) ||
-               $this->unitOfWork->isInIdentityMap($entity) &&
-               ! $this->unitOfWork->isScheduledForDelete($entity);
+        return $this->_unitOfWork->isScheduledForInsert($entity) ||
+               $this->_unitOfWork->isInIdentityMap($entity) &&
+               ! $this->_unitOfWork->isScheduledForDelete($entity);
     }
 
     /**
@@ -586,7 +494,7 @@ class EntityManager
      */
     public function getEventManager()
     {
-        return $this->eventManager;
+        return $this->_eventManager;
     }
 
     /**
@@ -596,7 +504,7 @@ class EntityManager
      */
     public function getConfiguration()
     {
-        return $this->config;
+        return $this->_config;
     }
 
     /**
@@ -604,9 +512,9 @@ class EntityManager
      *
      * @throws ORMException If the EntityManager is closed.
      */
-    private function errorIfClosed()
+    private function _errorIfClosed()
     {
-        if ($this->closed) {
+        if ($this->_closed) {
             throw ORMException::entityManagerClosed();
         }
     }
@@ -618,7 +526,7 @@ class EntityManager
      */
     public function getUnitOfWork()
     {
-        return $this->unitOfWork;
+        return $this->_unitOfWork;
     }
 
     /**
@@ -632,11 +540,11 @@ class EntityManager
      */
     public function getHydrator($hydrationMode)
     {
-        if ( ! isset($this->hydrators[$hydrationMode])) {
-            $this->hydrators[$hydrationMode] = $this->newHydrator($hydrationMode);
+        if ( ! isset($this->_hydrators[$hydrationMode])) {
+            $this->_hydrators[$hydrationMode] = $this->newHydrator($hydrationMode);
         }
 
-        return $this->hydrators[$hydrationMode];
+        return $this->_hydrators[$hydrationMode];
     }
 
     /**
@@ -661,10 +569,6 @@ class EntityManager
                 $hydrator = new Internal\Hydration\SingleScalarHydrator($this);
                 break;
             default:
-                if ($class = $this->config->getCustomHydrationMode($hydrationMode)) {
-                    $hydrator = new $class($this);
-                    break;
-                }
                 throw ORMException::invalidHydrationMode($hydrationMode);
         }
 
@@ -678,7 +582,7 @@ class EntityManager
      */
     public function getProxyFactory()
     {
-        return $this->proxyFactory;
+        return $this->_proxyFactory;
     }
 
     /**

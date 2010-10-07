@@ -36,7 +36,4 @@ class Select extends Base
 {
     protected $_preSeparator = '';
     protected $_postSeparator = '';
-    protected $_allowedClasses = array(
-        'Doctrine\ORM\Query\Expr\Func'
-    );
 }

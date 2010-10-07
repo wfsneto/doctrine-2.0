@@ -138,16 +138,10 @@ abstract class AbstractQuery
 
     /**
      * Frees the resources used by the query object.
-     *
-     * Resets Parameters, Parameter Types and Query Hints.
-     *
-     * @return void
      */
     public function free()
     {
         $this->_params = array();
-        $this->_paramTypes = array();
-        $this->_hints = array();
     }
 
     /**
@@ -469,7 +463,7 @@ abstract class AbstractQuery
     public function iterate(array $params = array(), $hydrationMode = self::HYDRATE_OBJECT)
     {
         return $this->_em->newHydrator($this->_hydrationMode)->iterate(
-            $this->_doExecute($params, $hydrationMode), $this->_resultSetMapping, $this->_hints
+            $this->_doExecute($params, $hydrationMode), $this->_resultSetMapping
         );
     }
 
@@ -575,16 +569,4 @@ abstract class AbstractQuery
      * @return Doctrine\DBAL\Driver\Statement The executed database statement that holds the results.
      */
     abstract protected function _doExecute();
-
-    /**
-     * Cleanup Query resource when clone is called.
-     *
-     * @return void
-     */
-    public function __clone()
-    {
-        $this->_params = array();
-        $this->_paramTypes = array();
-        $this->_hints = array();
-    }
 }

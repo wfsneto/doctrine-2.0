@@ -47,11 +47,6 @@ class QueryException extends \Doctrine\ORM\ORMException
         return new self('[Semantical Error] ' . $message);
     }
 
-    public static function invalidParameterType($expected, $received)
-    {
-        return new self('Invalid parameter type, ' . $received . ' given, but ' . $expected . ' expected.');
-    }
-
     public static function invalidParameterPosition($pos)
     {
         return new self('Invalid parameter position: ' . $pos);
@@ -91,7 +86,7 @@ class QueryException extends \Doctrine\ORM\ORMException
     {
         return new self(
             "Invalid query operation: Not allowed to iterate over fetch join collections ".
-            "in class ".$assoc['sourceEntity']." assocation ".$assoc['fieldName']
+            "in class ".$assoc->sourceEntityName." assocation ".$assoc->sourceFieldName
         );
     }
 
@@ -108,7 +103,7 @@ class QueryException extends \Doctrine\ORM\ORMException
     {
         return new self(
             "Unsupported query operation: It is not yet possible to overwrite the join ".
-            "conditions in class ".$assoc['sourceEntityName']." assocation ".$assoc['fieldName'].". ".
+            "conditions in class ".$assoc->sourceEntityName." assocation ".$assoc->sourceFieldName.". ".
             "Use WITH to append additional join conditions to the association."
         );
     }
@@ -123,8 +118,8 @@ class QueryException extends \Doctrine\ORM\ORMException
 
     public static function iterateWithFetchJoinNotAllowed($assoc) {
         return new self(
-            "Iterate with fetch join in class " . $assoc['sourceEntity'] .
-            " using association " . $assoc['fieldName'] . " not allowed."
+            "Iterate with fetch join in class " . $assoc->sourceEntityName .
+            " using association " . $assoc->sourceFieldName . " not allowed."
         );
     }
 

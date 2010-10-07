@@ -19,8 +19,6 @@
 
 namespace Doctrine\ORM;
 
-use Doctrine\DBAL\LockMode;
-
 /**
  * An EntityRepository serves as a repository for entities with generic as well as
  * business specific methods for retrieving entities.
@@ -89,50 +87,29 @@ class EntityRepository
      * Finds an entity by its primary key / identifier.
      *
      * @param $id The identifier.
-     * @param int $lockMode
-     * @param int $lockVersion
+     * @param int $hydrationMode The hydration mode to use.
      * @return object The entity.
      */
-    public function find($id, $lockMode = LockMode::NONE, $lockVersion = null)
+    public function find($id)
     {
         // Check identity map first
         if ($entity = $this->_em->getUnitOfWork()->tryGetById($id, $this->_class->rootEntityName)) {
-            if ($lockMode != LockMode::NONE) {
-                $this->_em->lock($entity, $lockMode, $lockVersion);
-            }
-
             return $entity; // Hit!
         }
 
         if ( ! is_array($id) || count($id) <= 1) {
-            // @todo FIXME: Not correct. Relies on specific order.
+            //FIXME: Not correct. Relies on specific order.
             $value = is_array($id) ? array_values($id) : array($id);
             $id = array_combine($this->_class->identifier, $value);
         }
 
-        if ($lockMode == LockMode::NONE) {
-            return $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName)->load($id);
-        } else if ($lockMode == LockMode::OPTIMISTIC) {
-            if (!$this->_class->isVersioned) {
-                throw OptimisticLockException::notVersioned($this->_entityName);
-            }
-            $entity = $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName)->load($id);
-
-            $this->_em->getUnitOfWork()->lock($entity, $lockMode, $lockVersion);
-
-            return $entity;
-        } else {
-            if (!$this->_em->getConnection()->isTransactionActive()) {
-                throw TransactionRequiredException::transactionRequired();
-            }
-            
-            return $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName)->load($id, null, null, array(), $lockMode);
-        }
+        return $this->_em->getUnitOfWork()->getEntityPersister($this->_entityName)->load($id);
     }
 
     /**
      * Finds all entities in the repository.
      *
+     * @param int $hydrationMode
      * @return array The entities.
      */
     public function findAll()
@@ -143,7 +120,8 @@ class EntityRepository
     /**
      * Finds entities by a set of criteria.
      *
-     * @param array $criteria
+     * @param string $column
+     * @param string $value
      * @return array
      */
     public function findBy(array $criteria)
@@ -154,7 +132,8 @@ class EntityRepository
     /**
      * Finds a single entity by a set of criteria.
      *
-     * @param array $criteria
+     * @param string $column
+     * @param string $value
      * @return object
      */
     public function findOneBy(array $criteria)
@@ -185,14 +164,13 @@ class EntityRepository
             );
         }
 
-        if ( !isset($arguments[0])) {
-            // we dont even want to allow null at this point, because we cannot (yet) transform it into IS NULL.
+        if ( ! isset($arguments[0])) {
             throw ORMException::findByRequiresParameter($method.$by);
         }
 
         $fieldName = lcfirst(\Doctrine\Common\Util\Inflector::classify($by));
 
-        if ($this->_class->hasField($fieldName) || $this->_class->hasAssociation($fieldName)) {
+        if ($this->_class->hasField($fieldName)) {
             return $this->$method(array($fieldName => $arguments[0]));
         } else {
             throw ORMException::invalidFindByCall($this->_entityName, $fieldName, $method.$by);

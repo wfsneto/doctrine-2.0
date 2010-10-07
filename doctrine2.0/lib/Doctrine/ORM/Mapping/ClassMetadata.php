@@ -42,6 +42,13 @@ use ReflectionClass, ReflectionProperty;
 class ClassMetadata extends ClassMetadataInfo
 {
     /**
+     * The ReflectionClass instance of the mapped class.
+     *
+     * @var ReflectionClass
+     */
+    public $reflClass;
+
+    /**
      * The ReflectionProperty instances of the mapped class.
      *
      * @var array
@@ -67,6 +74,16 @@ class ClassMetadata extends ClassMetadataInfo
         $this->reflClass = new ReflectionClass($entityName);
         $this->namespace = $this->reflClass->getNamespaceName();
         $this->table['name'] = $this->reflClass->getShortName();
+    }
+
+    /**
+     * Gets the ReflectionClass instance of the mapped class.
+     *
+     * @return ReflectionClass
+     */
+    public function getReflectionClass()
+    {
+        return $this->reflClass;
     }
 
     /**
@@ -143,11 +160,7 @@ class ClassMetadata extends ClassMetadataInfo
             }
             return $id;
         } else {
-            $value = $this->reflFields[$this->identifier[0]]->getValue($entity);
-            if ($value !== null) {
-                return array($this->identifier[0] => $value);
-            }
-            return array();
+            return array($this->identifier[0] => $this->reflFields[$this->identifier[0]]->getValue($entity));
         }
     }
 
@@ -158,10 +171,14 @@ class ClassMetadata extends ClassMetadataInfo
      * @param mixed $id
      * @todo Rename to assignIdentifier()
      */
-    public function setIdentifierValues($entity, array $id)
+    public function setIdentifierValues($entity, $id)
     {
-        foreach ($id as $idField => $idValue) {
-            $this->reflFields[$idField]->setValue($entity, $idValue);
+        if ($this->isIdentifierComposite) {
+            foreach ($id as $idField => $idValue) {
+                $this->reflFields[$idField]->setValue($entity, $idValue);
+            }
+        } else {
+            $this->reflFields[$this->identifier[0]]->setValue($entity, $id);
         }
     }
 
@@ -193,12 +210,12 @@ class ClassMetadata extends ClassMetadataInfo
      *
      * @param AssociationMapping $assocMapping
      */
-    protected function _storeAssociationMapping(array $assocMapping)
+    protected function _storeAssociationMapping(AssociationMapping $assocMapping)
     {
         parent::_storeAssociationMapping($assocMapping);
 
         // Store ReflectionProperty of mapped field
-        $sourceFieldName = $assocMapping['fieldName'];
+        $sourceFieldName = $assocMapping->sourceFieldName;
 
         $refProp = $this->reflClass->getProperty($sourceFieldName);
         $refProp->setAccessible(true);
@@ -232,19 +249,6 @@ class ClassMetadata extends ClassMetadataInfo
         return isset($this->table['quoted']) ?
                 $platform->quoteIdentifier($this->table['name']) :
                 $this->table['name'];
-    }
-
-    /**
-     * Gets the (possibly quoted) name of the join table.
-     *
-     * @param AbstractPlatform $platform
-     * @return string
-     */
-    public function getQuotedJoinTableName(array $assoc, $platform)
-    {
-        return isset($assoc['joinTable']['quoted'])
-            ? $platform->quoteIdentifier($assoc['joinTable']['name'])
-            : $assoc['joinTable']['name'];
     }
 
     /**
@@ -282,7 +286,6 @@ class ClassMetadata extends ClassMetadataInfo
             'identifier',
             'isIdentifierComposite', // TODO: REMOVE
             'name',
-            'namespace', // TODO: REMOVE
             'table',
             'rootEntityName',
             'idGenerator', //TODO: Does not really need to be serialized. Could be moved to runtime.
@@ -308,9 +311,6 @@ class ClassMetadata extends ClassMetadataInfo
 
         if ($this->generatorType != self::GENERATOR_TYPE_NONE) {
             $serialized[] = 'generatorType';
-            if ($this->generatorType == self::GENERATOR_TYPE_SEQUENCE) {
-                $serialized[] = 'sequenceGeneratorDefinition';
-            }
         }
 
         if ($this->isMappedSuperclass) {
@@ -350,8 +350,8 @@ class ClassMetadata extends ClassMetadataInfo
         }
 
         foreach ($this->associationMappings as $field => $mapping) {
-            if (isset($mapping['declared'])) {
-                $reflField = new ReflectionProperty($mapping['declared'], $field);
+            if ($mapping->declared) {
+                $reflField = new ReflectionProperty($mapping->declared, $field);
             } else {
                 $reflField = $this->reflClass->getProperty($field);
             }

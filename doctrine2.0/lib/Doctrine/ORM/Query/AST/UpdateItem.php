@@ -36,12 +36,13 @@ namespace Doctrine\ORM\Query\AST;
  */
 class UpdateItem extends Node
 {
-    public $pathExpression;
+    public $identificationVariable;
+    public $field;
     public $newValue;
 
-    public function __construct($pathExpression, $newValue)
+    public function __construct($field, $newValue)
     {
-        $this->pathExpression = $pathExpression;
+        $this->field = $field;
         $this->newValue = $newValue;
     }
 

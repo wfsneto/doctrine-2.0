@@ -31,10 +31,6 @@ Pessoa:
       primary: true
       autoincrement: true
       type: integer(8)
-    nome:
-      fixed: true
-      notnull: true
-      type: string(500)
     data_nasc: date(25)
     id_cidade: integer(8)
   relations:

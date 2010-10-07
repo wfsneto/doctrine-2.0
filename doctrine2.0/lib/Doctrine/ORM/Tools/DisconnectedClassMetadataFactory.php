@@ -44,7 +44,7 @@ class DisconnectedClassMetadataFactory extends ClassMetadataFactory
     /**
      * @override
      */
-    protected function newClassMetadataInstance($className)
+    protected function _newClassMetadataInstance($className)
     {
         return new ClassMetadataInfo($className);
     }
@@ -52,7 +52,7 @@ class DisconnectedClassMetadataFactory extends ClassMetadataFactory
     /**
      * @override
      */
-    protected function getParentClasses($name)
+    protected function _getParentClasses($name)
     {
         return array();
     }

@@ -59,7 +59,7 @@ class MultiTableUpdateExecutor extends AbstractSqlExecutor
 
         $updateItems = $updateClause->updateItems;
 
-        $tempTable = $platform->getTemporaryTableName($rootClass->getTemporaryIdTableName());
+        $tempTable = $rootClass->getTemporaryIdTableName();
         $idColumnNames = $rootClass->getIdentifierColumnNames();
         $idColumnList = implode(', ', $idColumnNames);
 
@@ -84,9 +84,8 @@ class MultiTableUpdateExecutor extends AbstractSqlExecutor
             $updateSql = 'UPDATE ' . $class->getQuotedTableName($platform) . ' SET ';
 
             foreach ($updateItems as $updateItem) {
-                $field = $updateItem->pathExpression->field;
-                if (isset($class->fieldMappings[$field]) && ! isset($class->fieldMappings[$field]['inherited']) ||
-                        isset($class->associationMappings[$field]) && ! isset($class->associationMappings[$field]['inherited'])) {
+                $field = $updateItem->field;
+                if (isset($class->fieldMappings[$field]) && ! isset($class->fieldMappings[$field]['inherited'])) {
                     $newValue = $updateItem->newValue;
                     
                     if ( ! $affected) {
@@ -127,7 +126,8 @@ class MultiTableUpdateExecutor extends AbstractSqlExecutor
             );
         }
         $this->_createTempTableSql = $platform->getCreateTemporaryTableSnippetSQL() . ' ' . $tempTable . ' ('
-                . $platform->getColumnDeclarationListSQL($columnDefinitions) . ')';
+                . $platform->getColumnDeclarationListSQL($columnDefinitions)
+                . ', PRIMARY KEY(' . $idColumnList . '))';
         $this->_dropTempTableSql = 'DROP TABLE ' . $tempTable;
     }
 

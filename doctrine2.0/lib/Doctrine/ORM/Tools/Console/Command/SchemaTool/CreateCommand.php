@@ -21,10 +21,10 @@
 
 namespace Doctrine\ORM\Tools\Console\Command\SchemaTool;
 
-use Symfony\Component\Console\Input\InputArgument,
-    Symfony\Component\Console\Input\InputOption,
-    Symfony\Component\Console\Input\InputInterface,
-    Symfony\Component\Console\Output\OutputInterface,
+use Symfony\Components\Console\Input\InputArgument,
+    Symfony\Components\Console\Input\InputOption,
+    Symfony\Components\Console\Input\InputInterface,
+    Symfony\Components\Console\Output\OutputInterface,
     Doctrine\ORM\Tools\SchemaTool;
 
 /**
@@ -65,8 +65,6 @@ EOT
 
     protected function executeSchemaCommand(InputInterface $input, OutputInterface $output, SchemaTool $schemaTool, array $metadatas)
     {
-        $output->write('ATTENTION: This operation should not be executed in an production enviroment.' . PHP_EOL . PHP_EOL);
-
         if ($input->getOption('dump-sql') === true) {
             $sqls = $schemaTool->getCreateSchemaSql($metadatas);
             $output->write(implode(';' . PHP_EOL, $sqls) . PHP_EOL);

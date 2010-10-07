@@ -21,9 +21,9 @@
 
 namespace Doctrine\ORM\Tools\Console\Command;
 
-use Symfony\Component\Console\Input\InputArgument,
-    Symfony\Component\Console\Input\InputOption,
-    Symfony\Component\Console;
+use Symfony\Components\Console\Input\InputArgument,
+    Symfony\Components\Console\Input\InputOption,
+    Symfony\Components\Console;
 
 /**
  * Validate that the current mapping is valid
@@ -44,46 +44,35 @@ class ValidateSchemaCommand extends Console\Command\Command
      */
     protected function configure()
     {
-        $this
-        ->setName('orm:validate-schema')
-        ->setDescription('Validate that the mapping files.')
-        ->setHelp(<<<EOT
-'Validate that the mapping files are correct and in sync with the database.'
-EOT
-        );
+        $this->setName('orm:validate-schema')
+             ->setDescription('Validate that the current metadata schema is valid.');
     }
-
+    
     /**
-     * @see Console\Command\Command
+     * @param InputInterface $input
+     * @param OutputInterface $output 
      */
     protected function execute(Console\Input\InputInterface $input, Console\Output\OutputInterface $output)
     {
-        $em = $this->getHelper('em')->getEntityManager();
+        $emHelper = $this->getHelper('em');
 
-        $validator = new \Doctrine\ORM\Tools\SchemaValidator($em);
-        $errors = $validator->validateMapping();
+        /* @var $em \Doctrine\ORM\EntityManager */
+        $em = $emHelper->getEntityManager();
 
-        $exit = 0;
-        if ($errors) {
-            foreach ($errors AS $className => $errorMessages) {
-                $output->write("<error>[Mapping]  FAIL - The entity-class '" . $className . "' mapping is invalid:</error>\n");
-                foreach ($errorMessages AS $errorMessage) {
-                    $output->write('* ' . $errorMessage . "\n");
-                }
-                $output->write("\n");
+        $metadatas = $em->getMetadataFactory()->getAllMetadata();
+
+        if ( ! empty($metadatas)) {
+            // Create SchemaTool
+            $tool = new \Doctrine\ORM\Tools\SchemaTool($em);
+            $updateSql = $tool->getUpdateSchemaSql($metadatas, false);
+
+            if (count($updateSql) == 0) {
+                $output->write("[Database] OK - Metadata schema exactly matches the database schema.");
+            } else {
+                $output->write("[Database] FAIL - There are differences between metadata and database schema.");
             }
-            $exit += 1;
         } else {
-            $output->write('<info>[Mapping]  OK - The mapping files are correct.</info>' . "\n");
+            $output->write("No metadata mappings found");
         }
-
-        if (!$validator->schemaInSyncWithMetadata()) {
-            $output->write('<error>[Database] FAIL - The database schema is not in sync with the current mapping file.</error>' . "\n");
-            $exit += 2;
-        } else {
-            $output->write('<info>[Database] OK - The database schema is in sync with the mapping files.</info>' . "\n");
-        }
-
-        exit($exit);
     }
 }

@@ -21,12 +21,11 @@
 
 namespace Doctrine\ORM\Tools\Console\Command;
 
-use Symfony\Component\Console\Input\InputArgument,
-    Symfony\Component\Console\Input\InputOption,
-    Symfony\Component\Console,
+use Symfony\Components\Console\Input\InputArgument,
+    Symfony\Components\Console\Input\InputOption,
+    Symfony\Components\Console,
     Doctrine\ORM\Tools\Export\ClassMetadataExporter,
-    Doctrine\ORM\Tools\ConvertDoctrine1Schema,
-    Doctrine\ORM\Tools\EntityGenerator;
+    Doctrine\ORM\Tools\ConvertDoctrine1Schema;
 
 /**
  * Command to convert a Doctrine 1 schema to a Doctrine 2 mapping file.
@@ -42,56 +41,6 @@ use Symfony\Component\Console\Input\InputArgument,
  */
 class ConvertDoctrine1SchemaCommand extends Console\Command\Command
 {
-    /**
-     * @var EntityGenerator
-     */
-    private $entityGenerator = null;
-
-    /**
-     * @var ClassMetadataExporter
-     */
-    private $metadataExporter = null;
-
-    /**
-     * @return EntityGenerator
-     */
-    public function getEntityGenerator()
-    {
-        if ($this->entityGenerator == null) {
-            $this->entityGenerator = new EntityGenerator();
-        }
-
-        return $this->entityGenerator;
-    }
-
-    /**
-     * @param EntityGenerator $entityGenerator
-     */
-    public function setEntityGenerator(EntityGenerator $entityGenerator)
-    {
-        $this->entityGenerator = $entityGenerator;
-    }
-
-    /**
-     * @return ClassMetadataExporter
-     */
-    public function getMetadataExporter()
-    {
-        if ($this->metadataExporter == null) {
-            $this->metadataExporter = new ClassMetadataExporter();
-        }
-        
-        return $this->metadataExporter;
-    }
-
-    /**
-     * @param ClassMetadataExporter $metadataExporter
-     */
-    public function setMetadataExporter(ClassMetadataExporter $metadataExporter)
-    {
-        $this->metadataExporter = $metadataExporter;
-    }
-    
     /**
      * @see Console\Command\Command
      */
@@ -141,27 +90,6 @@ EOT
         // Process source directories
         $fromPaths = array_merge(array($input->getArgument('from-path')), $input->getOption('from'));
 
-        // Process destination directory
-        $destPath = realpath($input->getArgument('dest-path'));
-
-        $toType = $input->getArgument('to-type');
-        $extend = $input->getOption('extend');
-        $numSpaces = $input->getOption('num-spaces');
-
-        $this->convertDoctrine1Schema($em, $fromPaths, $destPath, $toType, $numSpaces, $extend, $output);
-    }
-
-    /**
-     * @param \Doctrine\ORM\EntityManager $em
-     * @param array $fromPaths
-     * @param string $destPath
-     * @param string $toType
-     * @param int $numSpaces
-     * @param string|null $extend
-     * @param Console\Output\OutputInterface $output
-     */
-    public function convertDoctrine1Schema($em, $fromPaths, $destPath, $toType, $numSpaces, $extend, $output)
-    {
         foreach ($fromPaths as &$dirName) {
             $dirName = realpath($dirName);
 
@@ -176,6 +104,9 @@ EOT
             }
         }
 
+        // Process destination directory
+        $destPath = realpath($input->getArgument('dest-path'));
+
         if ( ! file_exists($destPath)) {
             throw new \InvalidArgumentException(
                 sprintf("Doctrine 2.X mapping destination directory '<info>%s</info>' does not exist.", $destPath)
@@ -186,16 +117,18 @@ EOT
             );
         }
 
-        $cme = $this->getMetadataExporter();
+        $toType = $input->getArgument('to-type');
+
+        $cme = new ClassMetadataExporter();
         $exporter = $cme->getExporter($toType, $destPath);
 
         if (strtolower($toType) === 'annotation') {
-            $entityGenerator = $this->getEntityGenerator();
+            $entityGenerator = new EntityGenerator();
             $exporter->setEntityGenerator($entityGenerator);
 
-            $entityGenerator->setNumSpaces($numSpaces);
+            $entityGenerator->setNumSpaces($input->getOption('num-spaces'));
 
-            if ($extend !== null) {
+            if (($extend = $input->getOption('extend')) !== null) {
                 $entityGenerator->setClassToExtend($extend);
             }
         }
@@ -203,7 +136,7 @@ EOT
         $converter = new ConvertDoctrine1Schema($fromPaths);
         $metadata = $converter->getMetadata();
 
-        if ($metadata) {
+        if ($metadatas) {
             $output->write(PHP_EOL);
 
             foreach ($metadata as $class) {

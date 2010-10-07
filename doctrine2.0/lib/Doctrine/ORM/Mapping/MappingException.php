@@ -170,16 +170,9 @@ class MappingException extends \Doctrine\ORM\ORMException
         );
     }
 
-    public static function fileMappingDriversRequireConfiguredDirectoryPath($path = null)
+    public static function fileMappingDriversRequireConfiguredDirectoryPath()
     {
-        if ( ! empty($path)) {
-            $path = '[' . $path . ']';
-        }
-        
-        return new self(
-            'File mapping drivers must have a valid directory path, ' .
-            'however the given path ' . $path . ' seems to be incorrect!'
-        );
+        return new self('File mapping drivers must have a directory path');
     }
 
     /**
@@ -195,16 +188,6 @@ class MappingException extends \Doctrine\ORM\ORMException
             "Entity class '$className' used in the discriminator map of class '$owningClass' ".
             "does not exist."
         );
-    }
-
-    public static function missingDiscriminatorMap($className)
-    {
-        return new self("Entity class '$className' is using inheritance but no discriminator map was defined.");
-    }
-
-    public static function missingDiscriminatorColumn($className)
-    {
-        return new self("Entity class '$className' is using inheritance but no discriminator column was defined.");
     }
 
     /**

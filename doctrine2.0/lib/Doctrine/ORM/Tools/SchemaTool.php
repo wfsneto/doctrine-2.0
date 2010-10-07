@@ -1,5 +1,7 @@
 <?php
 /*
+ *  $Id$
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -22,7 +24,6 @@ namespace Doctrine\ORM\Tools;
 use Doctrine\ORM\ORMException,
     Doctrine\DBAL\Types\Type,
     Doctrine\ORM\EntityManager,
-    Doctrine\ORM\Mapping\ClassMetadata,
     Doctrine\ORM\Internal\CommitOrderCalculator,
     Doctrine\ORM\Tools\Event\GenerateSchemaTableEventArgs,
     Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs;
@@ -116,12 +117,11 @@ class SchemaTool
 
             $table = $schema->createTable($class->getQuotedTableName($this->_platform));
 
-            // TODO: Remove
-            /**if ($class->isIdGeneratorIdentity()) {
+            if ($class->isIdGeneratorIdentity()) {
                 $table->setIdGeneratorType(\Doctrine\DBAL\Schema\Table::ID_IDENTITY);
             } else if ($class->isIdGeneratorSequence()) {
                 $table->setIdGeneratorType(\Doctrine\DBAL\Schema\Table::ID_SEQUENCE);
-            }*/
+            }
 
             $columns = array(); // table columns
 
@@ -171,10 +171,9 @@ class SchemaTool
                     $columnName = $class->getQuotedColumnName($class->identifier[0], $this->_platform);
 
                     $pkColumns[] = $columnName;
-                    // TODO: REMOVE
-                    /*if ($table->isIdGeneratorIdentity()) {
+                    if ($table->isIdGeneratorIdentity()) {
                        $table->setIdGeneratorType(\Doctrine\DBAL\Schema\Table::ID_NONE);
-                    }*/
+                    }
 
                     // Add a FK constraint on the ID column
                     $table->addUnnamedForeignKeyConstraint(
@@ -299,9 +298,6 @@ class SchemaTool
         $options = array();
         $options['length'] = isset($mapping['length']) ? $mapping['length'] : null;
         $options['notnull'] = isset($mapping['nullable']) ? ! $mapping['nullable'] : true;
-        if ($class->isInheritanceTypeSingleTable() && count($class->parentClasses) > 0) {
-            $options['notnull'] = false;
-        }
 
         $options['platformOptions'] = array();
         $options['platformOptions']['version'] = $class->isVersioned && $class->versionField == $mapping['fieldName'] ? true : false;
@@ -324,10 +320,6 @@ class SchemaTool
 
         if (isset($mapping['columnDefinition'])) {
             $options['columnDefinition'] = $mapping['columnDefinition'];
-        }
-
-        if ($class->isIdGeneratorIdentity() && $class->getIdentifierFieldNames() == array($mapping['fieldName'])) {
-            $options['autoincrement'] = true;
         }
 
         if ($table->hasColumn($columnName)) {
@@ -355,28 +347,24 @@ class SchemaTool
     private function _gatherRelationsSql($class, $table, $schema)
     {
         foreach ($class->associationMappings as $fieldName => $mapping) {
-            if (isset($mapping['inherited'])) {
+            if ($mapping->inherited) {
                 continue;
             }
 
-            $foreignClass = $this->_em->getClassMetadata($mapping['targetEntity']);
+            $foreignClass = $this->_em->getClassMetadata($mapping->targetEntityName);
 
-            if ($mapping['type'] & ClassMetadata::TO_ONE && $mapping['isOwningSide']) {
-                $primaryKeyColumns = $uniqueConstraints = array(); // PK is unnecessary for this relation-type
+            if ($mapping->isOneToOne() && $mapping->isOwningSide) {
+                $primaryKeyColumns = $uniqueConstraints = array(); // unnecessary for this relation-type
 
-                $this->_gatherRelationJoinColumns($mapping['joinColumns'], $table, $foreignClass, $mapping, $primaryKeyColumns, $uniqueConstraints);
-
-                foreach($uniqueConstraints AS $indexName => $unique) {
-                    $table->addUniqueIndex($unique['columns'], is_numeric($indexName) ? null : $indexName);
-                }
-            } else if ($mapping['type'] == ClassMetadata::ONE_TO_MANY && $mapping['isOwningSide']) {
+                $this->_gatherRelationJoinColumns($mapping->joinColumns, $table, $foreignClass, $mapping, $primaryKeyColumns, $uniqueConstraints);
+            } else if ($mapping->isOneToMany() && $mapping->isOwningSide) {
                 //... create join table, one-many through join table supported later
                 throw ORMException::notSupported();
-            } else if ($mapping['type'] == ClassMetadata::MANY_TO_MANY && $mapping['isOwningSide']) {
+            } else if ($mapping->isManyToMany() && $mapping->isOwningSide) {
                 // create join table
-                $joinTable = $mapping['joinTable'];
+                $joinTable = $mapping->joinTable;
 
-                $theJoinTable = $schema->createTable($foreignClass->getQuotedJoinTableName($mapping, $this->_platform));
+                $theJoinTable = $schema->createTable($mapping->getQuotedJoinTableName($this->_platform));
 
                 $primaryKeyColumns = $uniqueConstraints = array();
 
@@ -386,11 +374,13 @@ class SchemaTool
                 // Build second FK constraint (relation table => target table)
                 $this->_gatherRelationJoinColumns($joinTable['inverseJoinColumns'], $theJoinTable, $foreignClass, $mapping, $primaryKeyColumns, $uniqueConstraints);
 
-                $theJoinTable->setPrimaryKey($primaryKeyColumns);
-
                 foreach($uniqueConstraints AS $indexName => $unique) {
-                    $theJoinTable->addUniqueIndex($unique['columns'], is_numeric($indexName) ? null : $indexName);
+                    $theJoinTable->addUniqueIndex(
+                        $unique['columns'], is_numeric($indexName) ? null : $indexName
+                    );
                 }
+
+                $theJoinTable->setPrimaryKey($primaryKeyColumns);
             }
         }
     }
@@ -418,7 +408,7 @@ class SchemaTool
             if ( ! $class->hasField($referencedFieldName)) {
                 throw new \Doctrine\ORM\ORMException(
                     "Column name `".$joinColumn['referencedColumnName']."` referenced for relation from ".
-                    $mapping['sourceEntity'] . " towards ". $mapping['targetEntity'] . " does not exist."
+                    "$mapping->sourceEntityName towards $mapping->targetEntityName does not exist."
                 );
             }
 
@@ -442,12 +432,6 @@ class SchemaTool
                 $columnOptions = array('notnull' => false, 'columnDefinition' => $columnDef);
                 if (isset($joinColumn['nullable'])) {
                     $columnOptions['notnull'] = !$joinColumn['nullable'];
-                }
-                if ($fieldMapping['type'] == "string") {
-                    $columnOptions['length'] = $fieldMapping['length'];
-                } else if ($fieldMapping['type'] == "decimal") {
-                    $columnOptions['scale'] = $fieldMapping['scale'];
-                    $columnOptions['precision'] = $fieldMapping['precision'];
                 }
 
                 $theJoinTable->addColumn(
@@ -613,7 +597,7 @@ class SchemaTool
 
             foreach ($class->associationMappings as $assoc) {
                 if ($assoc->isOwningSide) {
-                    $targetClass = $this->_em->getClassMetadata($assoc['targetEntity']);
+                    $targetClass = $this->_em->getClassMetadata($assoc->targetEntityName);
 
                     if ( ! $calc->hasClass($targetClass->name)) {
                         $calc->addClass($targetClass);
@@ -634,7 +618,7 @@ class SchemaTool
 
         foreach ($classes as $class) {
             foreach ($class->associationMappings as $assoc) {
-                if ($assoc->isOwningSide && $assoc['type'] == ClassMetadata::MANY_TO_MANY) {
+                if ($assoc->isOwningSide && $assoc->isManyToMany()) {
                     $associationTables[] = $assoc->joinTable['name'];
                 }
             }

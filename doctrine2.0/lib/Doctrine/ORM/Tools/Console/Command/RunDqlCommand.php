@@ -21,9 +21,9 @@
 
 namespace Doctrine\ORM\Tools\Console\Command;
 
-use Symfony\Component\Console\Input\InputArgument,
-    Symfony\Component\Console\Input\InputOption,
-    Symfony\Component\Console;
+use Symfony\Components\Console\Input\InputArgument,
+    Symfony\Components\Console\Input\InputOption,
+    Symfony\Components\Console;
 
 /**
  * Command to execute DQL queries in a given EntityManager.
@@ -114,7 +114,7 @@ EOT
                 throw new \LogicException("Option 'max-result' must contains an integer value");
             }
 
-            $query->setMaxResults((int) $maxResult);
+            $query->setMaxResult((int) $maxResult);
         }
 
         $resultSet = $query->execute(array(), constant($hydrationMode));

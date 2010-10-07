@@ -23,10 +23,11 @@ namespace Doctrine\ORM\Query\AST;
  * AssociationPathExpression ::= CollectionValuedPathExpression | SingleValuedAssociationPathExpression
  * SingleValuedPathExpression ::= StateFieldPathExpression | SingleValuedAssociationPathExpression
  * StateFieldPathExpression ::= SimpleStateFieldPathExpression | SimpleStateFieldAssociationPathExpression
- * SingleValuedAssociationPathExpression ::= IdentificationVariable "." SingleValuedAssociationField
- * CollectionValuedPathExpression ::= IdentificationVariable "." CollectionValuedAssociationField
+ * SingleValuedAssociationPathExpression ::= IdentificationVariable "." {SingleValuedAssociationField "."}* SingleValuedAssociationField
+ * CollectionValuedPathExpression ::= IdentificationVariable "." {SingleValuedAssociationField "."}* CollectionValuedAssociationField
  * StateField ::= {EmbeddedClassStateField "."}* SimpleStateField
  * SimpleStateFieldPathExpression ::= IdentificationVariable "." StateField
+ * SimpleStateFieldAssociationPathExpression ::= SingleValuedAssociationPathExpression "." StateField
  * 
  * @since   2.0
  * @author  Guilherme Blanco <guilhermeblanco@hotmail.com>
@@ -42,13 +43,13 @@ class PathExpression extends Node
     public $type;
     public $expectedType;
     public $identificationVariable;
-    public $field;
+    public $parts;
     
-    public function __construct($expectedType, $identificationVariable, $field = null)
+    public function __construct($expectedType, $identificationVariable, array $parts)
     {
         $this->expectedType = $expectedType;
         $this->identificationVariable = $identificationVariable;
-        $this->field = $field;
+        $this->parts = $parts;
     }
     
     public function dispatch($walker)

@@ -1,5 +1,7 @@
 <?php
 /*
+ *  $Id$
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -29,11 +31,14 @@ require __DIR__ . '/DoctrineAnnotations.php';
 /**
  * The AnnotationDriver reads the mapping metadata from docblock annotations.
  *
- * @since 2.0
- * @author Benjamin Eberlei <kontakt@beberlei.de>
- * @author Guilherme Blanco <guilhermeblanco@hotmail.com>
- * @author Jonathan H. Wage <jonwage@gmail.com>
- * @author Roman Borschel <roman@code-factory.org>
+ * @license 	http://www.opensource.org/licenses/lgpl-license.php LGPL
+ * @link    	www.doctrine-project.org
+ * @since   	2.0
+ * @version     $Revision$
+ * @author		Benjamin Eberlei <kontakt@beberlei.de>
+ * @author		Guilherme Blanco <guilhermeblanco@hotmail.com>
+ * @author      Jonathan H. Wage <jonwage@gmail.com>
+ * @author      Roman Borschel <roman@code-factory.org>
  */
 class AnnotationDriver implements Driver
 {
@@ -138,7 +143,7 @@ class AnnotationDriver implements Driver
             throw MappingException::classIsNotAValidEntityOrMappedSuperClass($className);
         }
 
-        // Evaluate Table annotation
+        // Evaluate DoctrineTable annotation
         if (isset($classAnnotations['Doctrine\ORM\Mapping\Table'])) {
             $tableAnnot = $classAnnotations['Doctrine\ORM\Mapping\Table'];
             $primaryTable = array(
@@ -169,28 +174,23 @@ class AnnotationDriver implements Driver
         if (isset($classAnnotations['Doctrine\ORM\Mapping\InheritanceType'])) {
             $inheritanceTypeAnnot = $classAnnotations['Doctrine\ORM\Mapping\InheritanceType'];
             $metadata->setInheritanceType(constant('Doctrine\ORM\Mapping\ClassMetadata::INHERITANCE_TYPE_' . $inheritanceTypeAnnot->value));
-
-            if ($metadata->inheritanceType != \Doctrine\ORM\Mapping\ClassMetadata::INHERITANCE_TYPE_NONE) {
-                // Evaluate DiscriminatorColumn annotation
-                if (isset($classAnnotations['Doctrine\ORM\Mapping\DiscriminatorColumn'])) {
-                    $discrColumnAnnot = $classAnnotations['Doctrine\ORM\Mapping\DiscriminatorColumn'];
-                    $metadata->setDiscriminatorColumn(array(
-                        'name' => $discrColumnAnnot->name,
-                        'type' => $discrColumnAnnot->type,
-                        'length' => $discrColumnAnnot->length
-                    ));
-                } else {
-                    $metadata->setDiscriminatorColumn(array('name' => 'dtype', 'type' => 'string', 'length' => 255));
-                }
-
-                // Evaluate DiscriminatorMap annotation
-                if (isset($classAnnotations['Doctrine\ORM\Mapping\DiscriminatorMap'])) {
-                    $discrMapAnnot = $classAnnotations['Doctrine\ORM\Mapping\DiscriminatorMap'];
-                    $metadata->setDiscriminatorMap($discrMapAnnot->value);
-                }
-            }
         }
 
+        // Evaluate DiscriminatorColumn annotation
+        if (isset($classAnnotations['Doctrine\ORM\Mapping\DiscriminatorColumn'])) {
+            $discrColumnAnnot = $classAnnotations['Doctrine\ORM\Mapping\DiscriminatorColumn'];
+            $metadata->setDiscriminatorColumn(array(
+                'name' => $discrColumnAnnot->name,
+                'type' => $discrColumnAnnot->type,
+                'length' => $discrColumnAnnot->length
+            ));
+        }
+
+        // Evaluate DiscriminatorMap annotation
+        if (isset($classAnnotations['Doctrine\ORM\Mapping\DiscriminatorMap'])) {
+            $discrMapAnnot = $classAnnotations['Doctrine\ORM\Mapping\DiscriminatorMap'];
+            $metadata->setDiscriminatorMap($discrMapAnnot->value);
+        }
 
         // Evaluate DoctrineChangeTrackingPolicy annotation
         if (isset($classAnnotations['Doctrine\ORM\Mapping\ChangeTrackingPolicy'])) {
@@ -294,14 +294,14 @@ class AnnotationDriver implements Driver
                 $mapping['inversedBy'] = $oneToOneAnnot->inversedBy;
                 $mapping['cascade'] = $oneToOneAnnot->cascade;
                 $mapping['orphanRemoval'] = $oneToOneAnnot->orphanRemoval;
-                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\ClassMetadata::FETCH_' . $oneToOneAnnot->fetch);
+                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\AssociationMapping::FETCH_' . $oneToOneAnnot->fetch);
                 $metadata->mapOneToOne($mapping);
             } else if ($oneToManyAnnot = $this->_reader->getPropertyAnnotation($property, 'Doctrine\ORM\Mapping\OneToMany')) {
                 $mapping['mappedBy'] = $oneToManyAnnot->mappedBy;
                 $mapping['targetEntity'] = $oneToManyAnnot->targetEntity;
                 $mapping['cascade'] = $oneToManyAnnot->cascade;
                 $mapping['orphanRemoval'] = $oneToManyAnnot->orphanRemoval;
-                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\ClassMetadata::FETCH_' . $oneToManyAnnot->fetch);
+                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\AssociationMapping::FETCH_' . $oneToManyAnnot->fetch);
 
                 if ($orderByAnnot = $this->_reader->getPropertyAnnotation($property, 'Doctrine\ORM\Mapping\OrderBy')) {
                     $mapping['orderBy'] = $orderByAnnot->value;
@@ -313,7 +313,7 @@ class AnnotationDriver implements Driver
                 $mapping['cascade'] = $manyToOneAnnot->cascade;
                 $mapping['inversedBy'] = $manyToOneAnnot->inversedBy;
                 $mapping['targetEntity'] = $manyToOneAnnot->targetEntity;
-                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\ClassMetadata::FETCH_' . $manyToOneAnnot->fetch);
+                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\AssociationMapping::FETCH_' . $manyToOneAnnot->fetch);
                 $metadata->mapManyToOne($mapping);
             } else if ($manyToManyAnnot = $this->_reader->getPropertyAnnotation($property, 'Doctrine\ORM\Mapping\ManyToMany')) {
                 $joinTable = array();
@@ -354,7 +354,7 @@ class AnnotationDriver implements Driver
                 $mapping['mappedBy'] = $manyToManyAnnot->mappedBy;
                 $mapping['inversedBy'] = $manyToManyAnnot->inversedBy;
                 $mapping['cascade'] = $manyToManyAnnot->cascade;
-                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\ClassMetadata::FETCH_' . $manyToManyAnnot->fetch);
+                $mapping['fetch'] = constant('Doctrine\ORM\Mapping\AssociationMapping::FETCH_' . $manyToManyAnnot->fetch);
 
                 if ($orderByAnnot = $this->_reader->getPropertyAnnotation($property, 'Doctrine\ORM\Mapping\OrderBy')) {
                     $mapping['orderBy'] = $orderByAnnot->value;
@@ -437,7 +437,7 @@ class AnnotationDriver implements Driver
 
         foreach ($this->_paths as $path) {
             if ( ! is_dir($path)) {
-                throw MappingException::fileMappingDriversRequireConfiguredDirectoryPath($path);
+                throw MappingException::fileMappingDriversRequireConfiguredDirectoryPath();
             }
 
             $iterator = new \RecursiveIteratorIterator(
