@@ -10,9 +10,9 @@ $manager = Doctrine_Manager::getInstance();
 
 // Configurações do banco de dados. O banco deve ser criado previamente.
 $user = 'root';
-$password = '';
+$password = 'umdoistres';
 $host = 'localhost';
-$dbname = 'atividade';
+$dbname = 'doctrine1.2.3';
 $driver = 'mysql';
 
 $conn = Doctrine_Manager::connection($driver.'://'.$user.':'.$password.'@'.$host.'/'.$dbname);
