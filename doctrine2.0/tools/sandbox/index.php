@@ -1,7 +1,7 @@
 <?php
 /**
  * Welcome to Doctrine 2.
- * 
+ *
  * This is the index file of the sandbox. The first section of this file
  * demonstrates the bootstrapping and configuration procedure of Doctrine 2.
  * Below that section you can place your test code and experiment.
@@ -28,8 +28,8 @@ $classLoader->register();
 //$classLoader->register();
 $classLoader = new ClassLoader('Entities', __DIR__);
 $classLoader->register();
-//$classLoader = new ClassLoader('Proxies', __DIR__);
-//$classLoader->register();
+$classLoader = new ClassLoader('Proxies', __DIR__);
+$classLoader->register();
 
 // Set up caches
 $config = new Configuration;
@@ -59,9 +59,63 @@ $em = EntityManager::create($connectionOptions, $config);
 
 ## PUT YOUR TEST CODE BELOW
 
-$user = new \Entities\User();
-$address = new \Entities\Address();
-
 echo 'Hello World!<hr>';
+/* ----------------------------------------------------------------------- */
+
+//$platform = $em->getConnection()->getDatabasePlatform();
+//
+//$schema = new \Doctrine\DBAL\Schema\Schema();
+//
+//$tabela = $schema->createTable('teste');
+//$tabela->addColumn('id', 'integer', array('unsigned'=> true));
+//$tabela->addColumn('nome', 'string', array('length'=> 32));
+//$tabela->setPrimaryKey(array('id'));
+//
+//$queries = $schema->toSql($platform);
+//\print_r($queries);
+//$em->flush();
+
+/* ----------------------------------------------------------------------- */
+
+for ($i=0; $i<100; $i++) {
+    $usu = new \Entities\Usuario(null, 2, "usuario doctrine $i", "1 2 3 $i");
+    $em->persist($usu);
+}
+$inicio = \microtime(true);
+$em->flush();
+$final = \microtime(true);
+
+echo 'tempo gasto com doctrine: ' ;
+echo $final - $inicio;
+echo '<hr>';
 
 
+
+//$con = \mysql_connect('localhost', 'root', '');
+//$db = \mysql_select_db('doctrine2.0');
+//
+//$inicio = \microtime(true);
+//for ($i=0; $i<100; $i++) {
+//    \mysql_query("INSERT INTO usuarios VALUES ('',2,'usuario tradicional $i','123$i')");
+//}
+//$final = \microtime(true);
+//echo 'tempo gasto metodo tradiconal: ' ;
+//echo $final - $inicio;
+//echo '<hr>';
+
+
+
+/**
+ * adicionando registros
+ */
+//$user = new \Entities\Usuario();
+//$user->setName('maria');
+//$user->setPerfil(2);
+//$user->setPass('123');
+//
+//$em->persist($user);
+//$flush = $em->flush();
+
+
+/* ----------------------------------------------------------------------- */
+echo '<hr>Ok!';
