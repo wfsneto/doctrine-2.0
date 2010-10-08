@@ -56,8 +56,19 @@ $connectionOptions = array(
 
 // Create EntityManager
 $em = EntityManager::create($connectionOptions, $config);
+//$conn = $em->getConnection();
+//
+//$sm = $conn->getSchemaManager();
+//## PUT YOUR TEST CODE BELOW
+//
+//$fromSchema = $sm->createSchema();
+//$toSchema = clone $fromSchema;
+//$toSchema->dropTable('user');
+//$sql = $fromSchema->getMigrateToSql($toSchema, $conn->getDatabasePlatform());
+//
+//$conn->executeQuery($sql);
 
-## PUT YOUR TEST CODE BELOW
+
 
 echo 'Hello World!<hr>';
 /* ----------------------------------------------------------------------- */
@@ -72,22 +83,22 @@ echo 'Hello World!<hr>';
 //$tabela->setPrimaryKey(array('id'));
 //
 //$queries = $schema->toSql($platform);
-//\print_r($queries);
 //$em->flush();
+
 
 /* ----------------------------------------------------------------------- */
 
-for ($i=0; $i<100; $i++) {
-    $usu = new \Entities\Usuario(null, 2, "usuario doctrine $i", "1 2 3 $i");
-    $em->persist($usu);
-}
-$inicio = \microtime(true);
-$em->flush();
-$final = \microtime(true);
-
-echo 'tempo gasto com doctrine: ' ;
-echo $final - $inicio;
-echo '<hr>';
+//for ($i=0; $i<100; $i++) {
+//    $usu = new \Entities\Usuario(null, 2, "usuario doctrine $i", "1 2 3 $i");
+//    $em->persist($usu);
+//}
+//$inicio = \microtime(true);
+//$em->flush();
+//$final = \microtime(true);
+//
+//echo 'tempo gasto com doctrine: ' ;
+//echo $final - $inicio;
+//echo '<hr>';
 
 
 
