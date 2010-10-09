@@ -32,7 +32,7 @@ class Usuario {
         $this->id = $id;
         $this->perfil = $perfil;
         $this->name = $name;
-        $this->pass = $pass;
+        $this->pass = md5($pass);
     }
 
     public function getId() {

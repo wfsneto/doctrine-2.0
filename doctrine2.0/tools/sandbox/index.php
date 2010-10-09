@@ -12,7 +12,7 @@ use Doctrine\Common\ClassLoader,
     Doctrine\ORM\Configuration,
     Doctrine\ORM\EntityManager,
     Doctrine\Common\Cache\ApcCache,
-    Entities\User, Entities\Address;
+    Entities\Usuario, Entities\Perfil;
 
 require_once '../../lib/Doctrine/Common/ClassLoader.php';
 
@@ -33,7 +33,7 @@ $classLoader->register();
 
 // Set up caches
 $config = new Configuration;
-$cache = new ApcCache;
+$cache = new ApcCache();
 $config->setMetadataCacheImpl($cache);
 $driverImpl = $config->newDefaultAnnotationDriver(array(__DIR__."/Entities"));
 $config->setMetadataDriverImpl($driverImpl);
@@ -56,6 +56,7 @@ $connectionOptions = array(
 
 // Create EntityManager
 $em = EntityManager::create($connectionOptions, $config);
+
 //$conn = $em->getConnection();
 //
 //$sm = $conn->getSchemaManager();
@@ -67,8 +68,6 @@ $em = EntityManager::create($connectionOptions, $config);
 //$sql = $fromSchema->getMigrateToSql($toSchema, $conn->getDatabasePlatform());
 //
 //$conn->executeQuery($sql);
-
-
 
 echo 'Hello World!<hr>';
 /* ----------------------------------------------------------------------- */
@@ -85,7 +84,6 @@ echo 'Hello World!<hr>';
 //$queries = $schema->toSql($platform);
 //$em->flush();
 
-
 /* ----------------------------------------------------------------------- */
 
 //for ($i=0; $i<100; $i++) {
@@ -98,9 +96,9 @@ echo 'Hello World!<hr>';
 //
 //echo 'tempo gasto com doctrine: ' ;
 //echo $final - $inicio;
-//echo '<hr>';
+//echo '<br>';
 
-
+/* ----------------------------------------------------------------------- */
 
 //$con = \mysql_connect('localhost', 'root', '');
 //$db = \mysql_select_db('doctrine2.0');
@@ -114,7 +112,7 @@ echo 'Hello World!<hr>';
 //echo $final - $inicio;
 //echo '<hr>';
 
-
+/* ----------------------------------------------------------------------- */
 
 /**
  * adicionando registros
@@ -129,4 +127,30 @@ echo 'Hello World!<hr>';
 
 
 /* ----------------------------------------------------------------------- */
+
+
+//$user = new \Entities\Usuario();
+//$user->setName('Garfield');
+//$user->setPass('Garfield171');
+//$user->setPerfil(2);
+//$em->persist($user);
+//$em->flush();
+
+echo "User saved!";
+
+
+$q = $em->getRepository('Entities\Usuario')
+        ->findBy(array('name'=>'Garfield','pass'=>'9349f370dafef88333fcc79ce52eb1d6'));
+
+
+
+echo "Hello " . $q . "!";
+
+
+//$x = $user;
+
+echo '<pre>';
+print_r($q);
+echo '</pre>';
+
 echo '<hr>Ok!';
